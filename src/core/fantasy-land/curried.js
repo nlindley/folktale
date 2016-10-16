@@ -9,10 +9,9 @@
 
 
 /*~
- * Allows invoking methods of Fantasy Land structures without
- * worrying about the differences in multiple versions of the spec.
+ * Curried versions of the fantasy-land functions.
  * ---
- * category: Curried operations
+ * category: Convenience
  * stability: experimental
  * authors:
  *   - Quildreen Motta

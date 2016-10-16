@@ -9,10 +9,10 @@
 
 
 /*~
- * Allows invoking methods of Fantasy Land structures without
- * worrying about the differences in multiple versions of the spec.
+ * Method versions of the fantasy-land functions, supporting the
+ * `structure::fn(...)` syntax.
  * ---
- * category: Infix operations
+ * category: Convenience
  * stability: experimental
  * authors:
  *   - Quildreen Motta
