@@ -13,9 +13,6 @@
  * ---
  * category: Fantasy Land
  * stability: experimental
- * authors:
- *   - "@boris-marinov"
- *   - Quildreen Motta
  */
 module.exports = {
   apply: require('./apply'),

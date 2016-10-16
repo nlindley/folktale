@@ -13,8 +13,6 @@
  * ---
  * category: Convenience
  * stability: experimental
- * authors:
- *   - Quildreen Motta
  */
 module.exports = {
   apply: require('./apply').curried,

@@ -10,6 +10,13 @@
 //
 //----------------------------------------------------------------------
 
+
+/*~
+ * Implements common functional data structures in JavaScript.
+ * ---
+ * category: Data Structures
+ * stability: experimental
+ */
 module.exports = {
   maybe: require('./maybe'),
   either: require('./either'),

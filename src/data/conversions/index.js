@@ -16,8 +16,6 @@
  * ---
  * category: Converting data
  * stability: experimental
- * authors:
- *   - "@boris-marinov"
  */
 module.exports = {
   eitherToValidation: require('./either-to-validation'),
