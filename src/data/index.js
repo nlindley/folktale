@@ -14,10 +14,12 @@
 /*~
  * Implements common functional data structures in JavaScript.
  * ---
+ * name: module folktale/data
  * category: Data Structures
  * stability: experimental
  */
 module.exports = {
+  conversions: require('./conversions'),
   maybe: require('./maybe'),
   either: require('./either'),
   validation: require('./validation'),
