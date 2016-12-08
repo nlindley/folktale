@@ -64,6 +64,9 @@ test: clean compile compile-test
 test-minimal:
 	FOLKTALE_ASSERTIONS=none $(mocha) --require babel-polyfill --reporter dot --ui bdd test/specs
 
+test-documentation:
+	FOLKTALE_ASSERTIONS=minimal $(mocha) --require babel-polyfill --reporter spec --ui bdd --grep "documentation examples" test/specs
+
 test-browser: compile compile-test
 	$(karma) start test/karma-local.js
 
@@ -81,4 +84,4 @@ lint:
 	$(eslint) .
 
 
-.PHONY: help bundle compile compile-test compile-documentation clean test lint documentation test-minimal test-browser test-sauce all-tests
+.PHONY: help bundle compile compile-test compile-documentation clean test lint documentation test-minimal test-documentation test-browser test-sauce all-tests

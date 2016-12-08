@@ -56,7 +56,7 @@ const isNumber = (value) => typeof value === 'number';
 const isObject = (value) => Object(value) === value;
 
 
-function metamagical_withMeta(object, meta) {
+function __metamagical_withMeta(object, meta) {
   const parent  = Object.getPrototypeOf(object);
   let oldMeta   = object[Symbol.for('@@meta:magical')] || {};
   if (parent && parent[Symbol.for('@@meta:magical')] === oldMeta) {
@@ -79,12 +79,8 @@ const withMeta = template(
   `__metamagical_withMeta(OBJECT, META)`
 );
 
-const withMetaFD = parseJs(metamagical_withMeta.toString()).program.body[0];
-const withMetaAST = t.functionExpression(
-  t.identifier('metamagical_withMeta'),
-  withMetaFD.params,
-  withMetaFD.body
-);
+const withMetaFD = parseJs(__metamagical_withMeta.toString()).program.body[0];
+
 
 // --[ Parser ]--------------------------------------------------------
 const classifyLine = (line) =>
@@ -273,6 +269,10 @@ const annotateEntity = template(
   `meta.for(ENTITY).update(OBJECT)`
 );
 
+const moduleExport = template(
+  `module.exports = VALUE`
+);
+
 
 const lazy = (expr) => 
   t.functionExpression(
@@ -322,7 +322,18 @@ const valueToLiteral = (value, key) =>
 const generate = (entities, options) =>
   generateJs(
     t.program(
-      entities.map(x => generateEntity(x, options))
+      [
+        withMetaFD,
+        moduleExport({
+          VALUE: t.functionExpression(
+            null,
+            [t.identifier('meta'), t.identifier('folktale')],
+            t.blockStatement(
+              entities.map(x => generateEntity(x, options))
+            )
+          )
+        })
+      ]
     )
   ).code;
 
