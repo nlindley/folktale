@@ -19,7 +19,9 @@ DOCS_TGT := ${DOCS_SRC:$(DOCS_SRC_DIR)/%.md=$(DOCS_TGT_DIR)/%.js}
 # -- [ COMPILATION ] ---------------------------------------------------
 $(DOCS_TGT_DIR)/%.js: $(DOCS_SRC_DIR)/%.md
 	mkdir -p $(dir $@)
-	node tools/markdown-to-mm.js $< | $(babel) --filename $< --out-file $@
+	node tools/markdown-to-mm.js $< "$@.tmp"
+	$(babel) "$@.tmp" --out-file $@
+	rm "$@.tmp"
 
 node_modules: package.json
 	npm install
@@ -64,7 +66,7 @@ test: clean compile compile-test
 test-minimal:
 	FOLKTALE_ASSERTIONS=none $(mocha) --require babel-polyfill --reporter dot --ui bdd test/specs
 
-test-documentation:
+test-documentation: clean compile compile-test compile-documentation
 	FOLKTALE_ASSERTIONS=minimal $(mocha) --require babel-polyfill --reporter spec --ui bdd --grep "documentation examples" test/specs
 
 test-browser: compile compile-test

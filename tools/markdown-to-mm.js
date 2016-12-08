@@ -14,13 +14,18 @@
 const yaml = require('js-yaml');
 const marked = require('marked');
 const template = require('babel-template');
-const parseJs = require('babylon').parse;
+const babylonParse = require('babylon').parse;
 const t = require('babel-types');
 const generateJs = require('babel-generator').default;
 const fs = require('fs');
 const path = require('path');
 
-const babelOptions = JSON.parse(fs.readFileSync(path.join(__dirname, '../docs/source/.babelrc'), 'utf8'));
+const babelOptions = {
+  plugins: [
+    'objectRestSpread',
+    'functionBind'
+  ]
+};
 
 
 // --[ Helpers ]-------------------------------------------------------
@@ -30,8 +35,27 @@ const append = (list, item) =>
   item != null ? [...list, item]
 : /* _ */        list;
 
-const parseJsExpr = (source) => {
-  const ast = parseJs(source);
+const parseJs = (source, options = {}) => {
+  try {
+    return babylonParse(source, options);
+  } catch (e) {
+    const lines = source.split(/\r\n|\n\r|\r|\n/); 
+    const prev = lines.slice(Math.max(e.loc.line - 2, 1) - 1, e.loc.line - 1);
+    const line = lines[e.loc.line - 1];
+    const next = lines.slice(e.loc.line, e.loc.line + 2);
+
+    throw new SyntaxError(`${options.sourceFilename}: Unable to parse JS annotation, ${e.message}
+
+${prev.join('\n')}
+${line}
+${' '.repeat(e.loc.column)}^
+${next.join('\n')} 
+`);
+  }
+};
+
+const parseJsExpr = (source, options = {}) => {
+  const ast = parseJs(source, options = {});
   t.assertExpressionStatement(ast.program.body[0]);
   return ast.program.body[0].expression;
 };
@@ -339,15 +363,17 @@ const generate = (entities, options) =>
 
 const generateEntity = (entity, options) =>
   annotateEntity({
-    ENTITY: parseJsExpr(entity.ref),
+    ENTITY: parseJsExpr(entity.ref, options),
     OBJECT: mergeMeta(options, entity.meta)
   });
 
 
 // --[ Main ]----------------------------------------------------------
-if (process.argv.length < 3) {
-  throw new Error('Usage: node markdown-to-mm.js <INPUT>');
+if (process.argv.length < 4) {
+  throw new Error('Usage: node markdown-to-mm.js <INPUT> <OUTPUT>');
 }
 const input = process.argv[2];
+const output = process.argv[3];
 const source = fs.readFileSync(input, 'utf8');
-console.log(generate(analyse(parse(source)), babelOptions));
+fs.writeFileSync(output, generate(analyse(parse(source)), merge(babelOptions, { sourceFilename: input })));
+
