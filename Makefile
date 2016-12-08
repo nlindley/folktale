@@ -19,7 +19,7 @@ DOCS_TGT := ${DOCS_SRC:$(DOCS_SRC_DIR)/%.md=$(DOCS_TGT_DIR)/%.js}
 # -- [ COMPILATION ] ---------------------------------------------------
 $(DOCS_TGT_DIR)/%.js: $(DOCS_SRC_DIR)/%.md
 	mkdir -p $(dir $@)
-	node tools/markdown-to-mm.js $< | $(babel) -f $< > $@
+	node tools/markdown-to-mm.js $< | $(babel) --filename $< --out-file $@
 
 node_modules: package.json
 	npm install
@@ -53,6 +53,8 @@ compile-test:
 	$(babel) test/helpers-src --source-map inline --out-dir test/helpers
 	$(browserify) test/browser/browser-tests.js --source-map inline > test/browser/tests.js
 
+compile-documentation: $(DOCS_TGT)
+
 clean:
 	rm -rf core helpers data test/specs test/helpers index.js
 
@@ -72,11 +74,11 @@ all-tests:
 	$(MAKE) test
 	$(karma) start test/karma-local.js
 
-documentation: compile $(DOCS_TGT)
+documentation: compile compile-documentation
 #	node tools/generate-docs.js
 
 lint:
 	$(eslint) .
 
 
-.PHONY: help bundle compile compile-test clean test lint documentation test-minimal test-browser test-sauce all-tests
+.PHONY: help bundle compile compile-test compile-documentation clean test lint documentation test-minimal test-browser test-sauce all-tests

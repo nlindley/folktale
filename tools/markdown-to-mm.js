@@ -20,6 +20,8 @@ const generateJs = require('babel-generator').default;
 const fs = require('fs');
 const path = require('path');
 
+const babelOptions = JSON.parse(fs.readFileSync(path.join(__dirname, '../docs/source/.babelrc'), 'utf8'));
+
 
 // --[ Helpers ]-------------------------------------------------------
 const match = ([tag, payload], pattern) => pattern[tag](payload);
@@ -37,6 +39,10 @@ const parseJsExpr = (source) => {
 const pairs = (object) =>
   Object.keys(object).map(key => [key, object[key]]);
 
+const merge = (...args) => {
+  return Object.assign({}, ...args);
+};
+
 const raise = (error) => {
   throw error;
 };
@@ -48,6 +54,37 @@ const isBoolean = (value) => typeof value === 'boolean';
 const isNumber = (value) => typeof value === 'number';
 
 const isObject = (value) => Object(value) === value;
+
+
+function metamagical_withMeta(object, meta) {
+  const parent  = Object.getPrototypeOf(object);
+  let oldMeta   = object[Symbol.for('@@meta:magical')] || {};
+  if (parent && parent[Symbol.for('@@meta:magical')] === oldMeta) {
+    oldMeta = {};
+  }
+
+  Object.keys(meta).forEach(function(key) {
+    if (/^~/.test(key)) {
+      oldMeta[key.slice(1)] = meta[key];
+    } else {
+      oldMeta[key] = meta[key];
+    }
+  });
+  object[Symbol.for('@@meta:magical')] = oldMeta;
+
+  return object;
+}
+
+const withMeta = template(
+  `__metamagical_withMeta(OBJECT, META)`
+);
+
+const withMetaFD = parseJs(metamagical_withMeta.toString()).program.body[0];
+const withMetaAST = t.functionExpression(
+  t.identifier('metamagical_withMeta'),
+  withMetaFD.params,
+  withMetaFD.body
+);
 
 // --[ Parser ]--------------------------------------------------------
 const classifyLine = (line) =>
@@ -117,7 +154,6 @@ const parse = (source) =>
 const analyse = (entities) =>
   entities.map(parseMeta);
 
-
 const parseMeta = (entity) => {
   let meta = yaml.safeLoad(entity.meta) || {};
   meta.documentation = entity.doc;
@@ -128,17 +164,115 @@ const parseMeta = (entity) => {
 };
 
 
-// --[ Code generation ]-----------------------------------------------
-const annotateEntity = template(
-  `meta.for(ENTITY).update(OBJECT)`
-);
-
-
 class Raw {
   constructor(value) {
     this.value = value;
   }
 }
+
+// Examples
+const intoExampleFunction = (source, ast, options) => {
+  const body = ast.program.body;
+
+  return new Raw(withMeta({
+    OBJECT: t.functionExpression(
+      null,   // id
+      [],     // params
+      t.blockStatement(body),
+      false,  // generator
+      false   // async
+    ),
+    META: mergeMeta(options, { source })
+  }).expression);
+};
+
+const makeParser = (options) => (source) => parseJs(source, options || {});
+
+const parseExample = ({ name, source }, options) => {
+  let parse = makeParser(options || {})
+  return name        ? { name, call: intoExampleFunction(source, parse(source), options), inferred: true }
+  :      /* else */    { name: '', call: intoExampleFunction(source, parse(source), options), inferred: true };
+};
+
+
+const isExampleLeadingParagraph = (node) =>
+   node
+&& (node.type === 'paragraph' || node.type === 'heading')
+&& /::\s*$/.test(node.text);
+
+
+const collectExamples = (documentation) => {
+  const ast = marked.lexer(documentation);
+
+  const [xs, x, name] = ast.reduce(([examples, current, heading, nextNodeIsExample], node) => {
+    if (node.type === 'code') {
+      if (nextNodeIsExample) {
+        return [examples, [...current, node.text], heading, false];
+      } else {
+        return [examples, current, heading, false];
+      }
+    } else if (node.type === 'heading') {
+      return [
+        examples.concat({
+          name: heading,
+          source: current.join('\n\n')
+        }),
+        [],
+        node.text,
+        isExampleLeadingParagraph(node)
+      ];
+    } else if (node.type === 'paragraph') {
+      return [examples, current, heading, isExampleLeadingParagraph(node)];
+    } else {
+      return [examples, current, heading, false];
+    }
+  }, [[], [], null, false]);
+
+  if (x.length === 0) {
+    return xs;
+  } else {
+    return [...xs, {
+      name: name,
+      source: x.join('\n;\n')
+    }];
+  }
+};
+
+const inferExamples = (documentation, options) => {
+  const examples = collectExamples(documentation || '');
+
+  return examples.length > 0?  { examples: examples.map(e => parseExample(e, options)) }
+  :      /* otherwise */       { };
+};
+
+const inferDeprecated = (meta) => {
+  return meta.deprecated ?  merge(meta, { stability: 'deprecated' })
+  :      /* otherwise */    meta;
+};
+
+const inferMetadataFromProvidedMetadata = (meta) => {
+  return inferDeprecated(meta);
+};
+
+const mergeMeta = (options, ...args) => {
+  let fullMeta = merge(...args);
+  fullMeta = inferMetadataFromProvidedMetadata(fullMeta);
+
+  if (fullMeta.documentation) {
+    const doc = fullMeta.documentation;
+    fullMeta = merge(fullMeta, inferExamples(doc, options));
+    fullMeta.documentation = doc.replace(/^::$/gm, '').replace(/::[ \t]*$/gm, ':');
+  }
+
+  return objectToExpression(fullMeta);
+};
+
+
+// --[ Code generation ]-----------------------------------------------
+const annotateEntity = template(
+  `meta.for(ENTITY).update(OBJECT)`
+);
+
 
 const lazy = (expr) => 
   t.functionExpression(
@@ -185,17 +319,17 @@ const valueToLiteral = (value, key) =>
 : /* otherwise */          raise(new TypeError(`Type of property not supported: ${value}`));
 
 
-const generate = (entities) =>
+const generate = (entities, options) =>
   generateJs(
     t.program(
-      entities.map(generateEntity)
+      entities.map(x => generateEntity(x, options))
     )
   ).code;
 
-const generateEntity = (entity) =>
+const generateEntity = (entity, options) =>
   annotateEntity({
     ENTITY: parseJsExpr(entity.ref),
-    OBJECT: valueToLiteral(entity.meta)
+    OBJECT: mergeMeta(options, entity.meta)
   });
 
 
@@ -205,4 +339,4 @@ if (process.argv.length < 3) {
 }
 const input = process.argv[2];
 const source = fs.readFileSync(input, 'utf8');
-console.log(generate(analyse(parse(source))));
+console.log(generate(analyse(parse(source)), babelOptions));
