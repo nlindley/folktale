@@ -5,7 +5,7 @@ Returns pairs of `(key, value)` for all own enumerable properties in an object.
 
 ## Example::
 
-    const toPairs = require('folktale/core/object/toPairs');
+    const toPairs = require('folktale/core/object/to-pairs');
 
     const pair = { x: 10, y: 20 };
     toPairs(pair);
@@ -19,7 +19,7 @@ Objects in JavaScript are commonly used as dictionaries, but natively
 there are no operations to work with them in that way. This function
 allows one to extract the `(key, value)` pairs from an object::
 
-    const toPairs = require('folktale/core/object/toPairs');
+    const toPairs = require('folktale/core/object/to-pairs');
 
     const pair = { x: 10, y: 20 };
     toPairs(pair);

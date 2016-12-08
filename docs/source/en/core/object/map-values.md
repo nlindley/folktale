@@ -32,7 +32,7 @@ This is a free-method version of `mapValues` that applies the `this`
 argument first, then the function it takes as argument. It's meant to
 be used with the [This-Binding Syntax][es-bind] proposal::
 
-    const map = require('folktale/core/object/mapValues').infix;
+    const map = require('folktale/core/object/map-values').infix;
 
     const pair = { x: 10, y: 20 };
     pair::map(x => x * 2);
