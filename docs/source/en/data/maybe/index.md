@@ -33,8 +33,8 @@ predictable, and we don't have to worry about errors.
 Not all functions have this property (of being *total*), though. Functions like
 “find an item in this list” or “look up this key in that hashtable” don't always
 have an answer, and so one has to think about how they deal with the cases where
-the answer not being there. We have to be able to provide *some* kind of answer
-to the programmer, as otherwise the program can't continue — that is, not
+the answer is not there. We have to be able to provide *some* kind of answer
+to the programmer, otherwise the program can't continue — that is, not
 providing an answer is the equivalent of throwing an exception.
 
 In most languages, things like “find an item in this list” will return `null`
@@ -72,7 +72,7 @@ To:
 
     const Maybe = require('folktale/data/maybe');
 
-    const find1 = (list, predicate) => {
+    const find2 = (list, predicate) => {
       for (var i = 0; i < list.length; ++i) {
         const item = list[i];
         if (predicate(item)) {
@@ -82,7 +82,56 @@ To:
       return Maybe.Nothing();
     };
     
-    find1([1, 2, 3], (x) => x > 2); // => Maybe.Just(item)
-    find1([1, 2, 3], (x) => x > 3); // => Maybe.Nothing()
+    find2([1, 2, 3], (x) => x > 2); // => Maybe.Just(3)
+    find2([1, 2, 3], (x) => x > 3); // => Maybe.Nothing()
     
+This has the advantage that it's always possible to determine whether a function
+failed or not. For example, if we run `find1([null], x => true)`, then it'll
+return `null`, but if we run `find1([null], x => false)` it'll also return
+`null`! On the other hand, running `find2([null], x => true)` returns
+`Maybe.Just(null)`, and `find2([null], x => false)` returns `Maybe.Nothing()`.
+They're different values that can be tested.
+
+Another advantage of using a maybe value for these situations is that, since the
+return value is wrapped, the user of that function is forced to acknowledge the
+possibility of an error, as the value can't be used directly.
+
+
+## Working with Maybe values
+
+Last section shows how to create Maybe values, but how do we use them? A value
+wrapped in a Maybe can't be used directly, so using these values is a bit more
+of work. Folktale's Maybe structure provides methods to help with this, and they
+can be divided roughly into 3 categories:
+
+  - **Extracting values**: Sometimes we need to pass the value into things that
+    don't really know what a Maybe is, so we have to somehow extract the value
+    out of the structure. These methods help with that.
+
+  - **Transforming values**: Sometimes we get a Maybe value that doesn't *quite*
+    have the value we're looking for. We don't really want to change the status
+    of the computation (failures should continue to be failures, successes
+    should continue to be successes), but we'd like to tweak the resulting
+    *value* a bit. This is the equivalent of applying functions in an expression.
+
+  - **Sequencing computations**: A Maybe is the result of a computation that can
+    fail. Sometimes we want to run several computations that may fail in
+    sequence, and these methods help with that. This is roughly the equivalent
+    of `;` in imperative programming, where the next instruction is only
+    executed if the previous instruction succeeds.
+    
+        
+We'll see each of these categories in more details below.
+
+
+### Extracting values
+
+If we're wrapping a value in a Maybe, then we can use the value by extracting it
+from that container. Folktale lets you do this through the `getOrElse(default)`
+method:
+
+
+
+
+
 
