@@ -18,8 +18,8 @@ A data structure that models the presence or abscence of a value.
       return Maybe.Nothing();
     };
     
-    find([1, 2, 3], (x) => x > 2); // => Maybe.Just(3)
-    find([1, 2, 3], (x) => x > 3); // => Maybe.Nothing()
+    find([1, 2, 3], (x) => x > 2); // ==> Maybe.Just(3)
+    find([1, 2, 3], (x) => x > 3); // ==> Maybe.Nothing()
     
     
 ## Why use Maybe?
@@ -65,8 +65,8 @@ If we have maybe, we can change our code from::
       return null;
     };
     
-    find1([1, 2, 3], (x) => x > 2); // => 3
-    find1([1, 2, 3], (x) => x > 3); // => null
+    find1([1, 2, 3], (x) => x > 2); // ==> 3
+    find1([1, 2, 3], (x) => x > 3); // ==> null
     
 To:
 
@@ -82,8 +82,8 @@ To:
       return Maybe.Nothing();
     };
     
-    find2([1, 2, 3], (x) => x > 2); // => Maybe.Just(3)
-    find2([1, 2, 3], (x) => x > 3); // => Maybe.Nothing()
+    find2([1, 2, 3], (x) => x > 2); // ==> Maybe.Just(3)
+    find2([1, 2, 3], (x) => x > 3); // ==> Maybe.Nothing()
     
 This has the advantage that it's always possible to determine whether a function
 failed or not. For example, if we run `find1([null], x => true)`, then it'll
@@ -130,7 +130,58 @@ If we're wrapping a value in a Maybe, then we can use the value by extracting it
 from that container. Folktale lets you do this through the `getOrElse(default)`
 method:
 
+    const Maybe = require('folktale/data/maybe');
 
+    function get(object, key) {
+      return key in object ?  Maybe.Just(object[key])
+      :      /* otherwise */  Maybe.Nothing();
+    }
+    
+    const config = {
+      host: '0.0.0.0'
+    };
+    
+    const host = get(config, 'host').getOrElse('localhost');
+    const port = get(config, 'port').getOrElse(8080);
+
+    `${host}:${port}`; // ==> '0.0.0.0:8080'
+    
+This works well if the only error handling we need to do is providing a default
+value, which is a fairly common scenario when working with Maybe values. For
+more advanced error handling Folktale provides more powerful methods that are
+described later in this document.
+
+
+### Transforming values
+
+Sometimes we want to keep the context of the computation (whether it has failed
+or succeeded), but we want to tweak the value a little bit. For example, suppose
+you're trying to render the first item of a list, which involves generating some
+UI elements with the data from that object, but the list can be empty so you
+have to handle that error first. We can't use `getOrElse()` here because if we
+have an error, we don't want to render that error in the same way. Instead, we
+can use `map(transformation)` to apply our rendering logic only to successful
+values:
+
+    const Maybe = require('folktale/data/maybe');
+
+    function first(list) {
+      return list.length > 0 ?  Maybe.Just(list[0])
+      :      /* otherwise */    Maybe.Nothing();
+    }
+    
+    function render(item) {
+      return ['item', ['title', item.title]];
+    }
+    
+    first([{ title: 'Hello' }]).map(render);
+    // ==> Maybe.Just(['item', ['title', 'Hello']])
+    
+    first([]).map(render);
+    // ==> Maybe.Nothing()
+    
+    
+    
 
 
 
